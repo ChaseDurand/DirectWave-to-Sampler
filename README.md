@@ -1,1 +1,1 @@
-# DirectWave-to-Live-Sampler
+# DirectWave-to-Sampler
