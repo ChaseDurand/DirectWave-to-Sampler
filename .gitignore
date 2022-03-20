@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#OSX
+.DS_Store
+
+#Test Files
+/wavs
