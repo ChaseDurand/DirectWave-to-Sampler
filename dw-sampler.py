@@ -4,8 +4,10 @@ import wave
 import pathlib
 import sys
 from dataclasses import dataclass
+from midiNotes import getNoteFromStr
 
 def main():
+    #Confirm only arguments are script+directory
     if(len(sys.argv) != 2):
         print("Erorr: Expected 1 argument but found",len(sys.argv)-1)
         if(len(sys.argv) == 1):
@@ -31,11 +33,18 @@ def main():
     sampleTable = []
     for wav in wavDirectory.glob("*.wav"):
         rootNoteVelocity = wav.stem[len(samplerName):]
+        # Confirm file name is samplerName_rootNote_velocity
+        if(len(rootNoteVelocity.split("_")) != 3):
+            print("Error! Unable to parse wav filename:", wav.stem)
+            exit(1)
+        # exit()
         rootNoteStr = rootNoteVelocity.split("_")[1]
         velocityStr = rootNoteVelocity.split("_")[2]
-        sampleTable.append(Sample(wav.name, rootNoteStr, velocityStr))
+        sampleTable.append(Sample(wav.name, getNoteFromStr(rootNoteStr), velocityStr))
     print(sampleTable[-1])
-    print(len(sampleTable))
+
+    print("Found", len(sampleTable), ".wav files.")
+
 
     exit(0)
 
