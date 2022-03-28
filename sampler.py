@@ -26,7 +26,7 @@ def createSampleDir(samplerName, destLocation):
 # Zip xml as instrument
 # Copy to destination
 def createSampler(samplerName, table, userLibrary):
-    template = ET.parse("samplerTemplate.xml")
+    template = ET.parse("templates/samplerTemplate.xml")
     templateRoot = template.getroot()
     insertionLocation = templateRoot.find('MultiSampler')
     insertionLocation = insertionLocation.find('Player')
@@ -90,7 +90,7 @@ def getLibraryLocation():
 
 # Given a sample, add to XML
 def insertSampleInXML(sample, insertionLocation, index, isLast, samplerName):
-    newElement = ET.parse("multiSamplePart.xml").getroot()
+    newElement = ET.parse("templates/multiSampleTemplate.xml").getroot()
 
     # Add ID
     newElement.set("Id", str(index))
