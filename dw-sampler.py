@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
 
+from dbm.ndbm import library
 from math import ceil
 import wave
 import pathlib
 import sys
 from dataclasses import dataclass
 from midiNotes import getNoteFromStr
+from sampler import *
 
 def main():
+
     #Confirm only arguments are script+directory
     if(len(sys.argv) != 2):
         print("Erorr: Expected 1 argument but found",len(sys.argv)-1)
         if(len(sys.argv) == 1):
             print("Error: Please provide wav folder path as argument!")
         exit(1)
+
+    if sys.platform == "darwin":
+        IS_MAC = True
+    else:
+        IS_MAC = False
 
     wavDirectory = pathlib.Path(sys.argv[1])
 
@@ -27,6 +35,7 @@ def main():
 
     @dataclass
     class Sample:
+        fullPath: pathlib.PosixPath
         fileName: pathlib.PosixPath
         rootNote: int
         velocity: int
@@ -48,7 +57,8 @@ def main():
         rootNoteStr = rootNoteVelocity.split("_")[1]
         velocityStr = rootNoteVelocity.split("_")[2]
         frameEnd = wave.open(str(wav), 'rb').getnframes() -1
-        sampleTable.append(Sample(wav.name,
+        sampleTable.append(Sample(wav,
+                                  wav.name,
                                   getNoteFromStr(rootNoteStr),
                                   velocityStr,
                                   0,
@@ -56,9 +66,10 @@ def main():
                                   frameEnd))
     
     # Sort table (by rootNote)
+    # TODO sort and parse by velocity
+    # TODO change to find key zones vs calulating each time
     sampleTable.sort()
     tableSize = len(sampleTable)
-
     if(tableSize >= 2):
         for i in range(0,tableSize):
             if (i == 0):
@@ -73,12 +84,28 @@ def main():
                 upperRangeDelta = sampleTable[i+1].rootNote - sampleTable[i].rootNote
                 sampleTable[i].keyRangeMax = sampleTable[i].rootNote+round(upperRangeDelta/2)
 
-    for i in sampleTable:
-        print(i)
-
     print("Found", len(sampleTable), ".wav files.")
+
+    # Get User Library location
+    userLibrary = getLibraryLocation()
+
+
+
+    
+    
+    createSampler(samplerName, sampleTable, userLibrary)
+
+    
 
     exit(0)
 
 if __name__ == '__main__':
     main()
+
+# User Library Location:
+# Get highest live version to find file
+# Mac: Users/[username]/Library/Preferences/Ableton/Live x.x.x/
+# Windows: Users\[username]\AppData\Roaming\Ableton\Live x.x.x\Preferences\
+# Library.cfg
+# LibraryProject
+# DisplayName
