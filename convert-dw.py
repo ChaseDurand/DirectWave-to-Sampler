@@ -14,9 +14,13 @@ class Sample:
     fullPath: pathlib.PosixPath
     fileName: pathlib.PosixPath
     rootNote: int
-    velocity: int
     keyRangeMin: int
     keyRangeMax: int
+    velocityRoot: int
+    # velocityMin: int
+    # velocityMax: int
+    # zoneMin: int
+    # zoneMax: int
     sampleEnd: int
     # Use root note to compare samples
     def __lt__(self, other):
@@ -56,9 +60,9 @@ def main():
         sampleTable.append(Sample(wav,
                                   wav.name,
                                   getNoteFromStr(rootNoteStr),
+                                  0,
+                                  0,
                                   velocityStr,
-                                  0,
-                                  0,
                                   frameEnd))
     
     # Sort table (by rootNote)
@@ -66,19 +70,19 @@ def main():
     # TODO change to find key zones vs calulating each time
     sampleTable.sort()
     tableSize = len(sampleTable)
-    if(tableSize >= 2):
-        for i in range(0,tableSize):
-            if (i == 0):
-                sampleTable[i].keyRangeMin = 0
-            else:
-                lowerRangeDelta = sampleTable[i].rootNote - sampleTable[i-1].rootNote
-                sampleTable[i].keyRangeMin = sampleTable[i].rootNote-ceil(lowerRangeDelta/2)+1
+    # if(tableSize >= 2):
+    for i in range(0,tableSize):
+        if (i == 0):
+            sampleTable[i].keyRangeMin = 0
+        else:
+            lowerRangeDelta = sampleTable[i].rootNote - sampleTable[i-1].rootNote
+            sampleTable[i].keyRangeMin = sampleTable[i].rootNote-ceil(lowerRangeDelta/2)+1
 
-            if (i == tableSize-1):
-                 sampleTable[i].keyRangeMax = 127
-            else:
-                upperRangeDelta = sampleTable[i+1].rootNote - sampleTable[i].rootNote
-                sampleTable[i].keyRangeMax = sampleTable[i].rootNote+round(upperRangeDelta/2)
+        if (i == tableSize-1):
+                sampleTable[i].keyRangeMax = 127
+        else:
+            upperRangeDelta = sampleTable[i+1].rootNote - sampleTable[i].rootNote
+            sampleTable[i].keyRangeMax = sampleTable[i].rootNote+round(upperRangeDelta/2)
 
     print("Found", len(sampleTable), ".wav files.")
 
