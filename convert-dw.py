@@ -17,8 +17,8 @@ class Sample:
     keyRangeMin: int
     keyRangeMax: int
     velocityRoot: int
-    # velocityMin: int
-    # velocityMax: int
+    velocityMin: int
+    velocityMax: int
     # zoneMin: int
     # zoneMax: int
     sampleEnd: int
@@ -53,9 +53,8 @@ def main():
         if(len(rootNoteVelocity.split("_")) != 3):
             print("Error! Unable to parse wav filename:", wav.stem)
             exit(1)
-        # exit()
         rootNoteStr = rootNoteVelocity.split("_")[1]
-        velocityStr = rootNoteVelocity.split("_")[2]
+        velocityStr = int(rootNoteVelocity.split("_")[2])
         frameEnd = wave.open(str(wav), 'rb').getnframes() -1
         sampleTable.append(Sample(wav,
                                   wav.name,
@@ -63,26 +62,62 @@ def main():
                                   0,
                                   0,
                                   velocityStr,
+                                  0,
+                                  0,
                                   frameEnd))
-    
-    # Sort table (by rootNote)
-    # TODO sort and parse by velocity
-    # TODO change to find key zones vs calulating each time
-    sampleTable.sort()
-    tableSize = len(sampleTable)
-    # if(tableSize >= 2):
-    for i in range(0,tableSize):
-        if (i == 0):
-            sampleTable[i].keyRangeMin = 0
-        else:
-            lowerRangeDelta = sampleTable[i].rootNote - sampleTable[i-1].rootNote
-            sampleTable[i].keyRangeMin = sampleTable[i].rootNote-ceil(lowerRangeDelta/2)+1
 
-        if (i == tableSize-1):
-                sampleTable[i].keyRangeMax = 127
+    # Determine number of velocity layers per note
+    velocityCount = {}
+
+    for sample in sampleTable:
+        if sample.rootNote in velocityCount:
+            velocityCount[sample.rootNote] += 1
         else:
-            upperRangeDelta = sampleTable[i+1].rootNote - sampleTable[i].rootNote
-            sampleTable[i].keyRangeMax = sampleTable[i].rootNote+round(upperRangeDelta/2)
+            velocityCount[sample.rootNote] = 1
+
+    velocityCycles = next(iter(velocityCount.values()))
+
+    if not all(val == velocityCycles for val in velocityCount.values()):
+        print("Error: missing samples for velocity cycles!")
+        exit(1)
+
+    # Sort by root note then velocity
+    sampleTable = sorted(sampleTable, key = lambda x: (x.rootNote, x.velocityRoot))
+
+    i = 0
+    tableSize = len(sampleTable)
+    while(i != tableSize):
+        j = 0
+        while(j < velocityCycles):
+            # Handle velocity ranges
+            if (j == 0):
+                sampleTable[i+j].velocityMin = 0
+            else:
+                lowerRangeDelta = sampleTable[i+j].velocityRoot - sampleTable[i+j-1].velocityRoot
+                sampleTable[i+j].velocityMin = sampleTable[i+j].velocityRoot-ceil(lowerRangeDelta/2)+1
+
+            if (j == velocityCycles-1):
+                sampleTable[i+j].velocityMax = 127
+            else:
+                upperRangeDelta = sampleTable[i+j+1].velocityRoot - sampleTable[i+j].velocityRoot
+                sampleTable[i+j].velocityMax = sampleTable[i+j].velocityRoot+round(upperRangeDelta/2)
+            
+
+            # Handle note ranges
+            if (i == 0):
+                sampleTable[i+j].keyRangeMin = 0
+            else:
+                lowerRangeDelta = sampleTable[i+j].rootNote - sampleTable[(i+j)-velocityCycles].rootNote
+                sampleTable[i+j].keyRangeMin = sampleTable[i+j].rootNote-ceil(lowerRangeDelta/2)+1
+
+            if (i == tableSize-velocityCycles):
+                sampleTable[i+j].keyRangeMax = 127
+            else:
+                upperRangeDelta = sampleTable[i+velocityCycles].rootNote - sampleTable[i+j].rootNote
+                sampleTable[i+j].keyRangeMax = sampleTable[i+j].rootNote+round(upperRangeDelta/2)
+
+            j += 1
+        i += velocityCycles
 
     print("Found", len(sampleTable), ".wav files.")
 
