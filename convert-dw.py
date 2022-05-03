@@ -19,8 +19,9 @@ class Sample:
     velocityRoot: int
     velocityMin: int
     velocityMax: int
-    # zoneMin: int
-    # zoneMax: int
+    cycle: int
+    zoneMin: int
+    zoneMax: int
     sampleEnd: int
     # Use root note to compare samples
     def __lt__(self, other):
@@ -48,13 +49,31 @@ def main():
 
     sampleTable = []
     for wav in wavDirectory.glob("*.wav"):
-        rootNoteVelocity = wav.stem[len(samplerName):]
-        # Confirm file name is samplerName_rootNote_velocity
-        if(len(rootNoteVelocity.split("_")) != 3):
+        fileTail = wav.stem.split(" ")[-1].split("_")
+
+        # Confirm file name tail is either:
+        #   Layers_rootNote_velocity
+        # or
+        #   #xCycles_rootNote_velocity_cycle
+        if(len(fileTail) != 3 and len(fileTail) != 4):
             print("Error! Unable to parse wav filename:", wav.stem)
             exit(1)
-        rootNoteStr = rootNoteVelocity.split("_")[1]
-        velocityStr = int(rootNoteVelocity.split("_")[2])
+
+        robinCycles = fileTail[0]
+        if(robinCycles != "Layers"):
+            # Generate round robin cycle ranges
+            cycle = int(fileTail[3]) - 1
+            totalCycles = int(robinCycles.split("x")[0])
+            k, m = divmod(len(range(0, 128, 1)), totalCycles)
+            cycleRange = list((range(0, 128, 1)[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(totalCycles)))[cycle]
+            cycle = str(fileTail[3])
+        else:
+            totalCycles = 1
+            cycle = 1
+            cycleRange=[0, 127]
+
+        rootNoteStr = fileTail[1]
+        velocityStr = int(fileTail[2])
         frameEnd = wave.open(str(wav), 'rb').getnframes() -1
         sampleTable.append(Sample(wav,
                                   wav.name,
@@ -64,60 +83,62 @@ def main():
                                   velocityStr,
                                   0,
                                   0,
+                                  cycle,
+                                  cycleRange[0],
+                                  cycleRange[-1],
                                   frameEnd))
 
-    # Determine number of velocity layers per note
-    velocityCount = {}
+    # Sort by root note, then velocity, then round robin cycle
+    sampleTable = sorted(sampleTable, key = lambda x: (x.rootNote, x.velocityRoot, x.cycle))
 
-    for sample in sampleTable:
-        if sample.rootNote in velocityCount:
-            velocityCount[sample.rootNote] += 1
-        else:
-            velocityCount[sample.rootNote] = 1
-
-    velocityCycles = next(iter(velocityCount.values()))
-
-    if not all(val == velocityCycles for val in velocityCount.values()):
-        print("Error: missing samples for velocity cycles!")
-        exit(1)
-
-    # Sort by root note then velocity
-    sampleTable = sorted(sampleTable, key = lambda x: (x.rootNote, x.velocityRoot))
-
+    # Determine velocity cycles
+    velocityCycles = 1
     i = 0
+    while(i < len(sampleTable)):
+        if(i != 0):
+            if((sampleTable[i].rootNote == sampleTable[0].rootNote)\
+                and (sampleTable[i].velocityRoot != sampleTable[0].velocityRoot)):
+                velocityCycles += 1
+            else:
+                break
+        i += 1
+    i = 0
+
     tableSize = len(sampleTable)
+    print(tableSize, velocityCycles, totalCycles)
     while(i != tableSize):
         j = 0
         while(j < velocityCycles):
-            # Handle velocity ranges
-            if (j == 0):
-                sampleTable[i+j].velocityMin = 0
-            else:
-                lowerRangeDelta = sampleTable[i+j].velocityRoot - sampleTable[i+j-1].velocityRoot
-                sampleTable[i+j].velocityMin = sampleTable[i+j].velocityRoot-ceil(lowerRangeDelta/2)+1
+            k = 0
+            while(k < totalCycles):
+                # Handle velocity ranges
+                if (j == 0):
+                    sampleTable[i+j+k].velocityMin = 0
+                else:
+                    lowerRangeDelta = sampleTable[i+j].velocityRoot - sampleTable[i+j-1].velocityRoot
+                    sampleTable[i+j+k].velocityMin = sampleTable[i+j].velocityRoot-ceil(lowerRangeDelta/2)+1
 
-            if (j == velocityCycles-1):
-                sampleTable[i+j].velocityMax = 127
-            else:
-                upperRangeDelta = sampleTable[i+j+1].velocityRoot - sampleTable[i+j].velocityRoot
-                sampleTable[i+j].velocityMax = sampleTable[i+j].velocityRoot+round(upperRangeDelta/2)
-            
+                if (j == velocityCycles-1):
+                    sampleTable[i+j+k].velocityMax = 127
+                else:
+                    upperRangeDelta = sampleTable[i+j+1].velocityRoot - sampleTable[i+j].velocityRoot
+                    sampleTable[i+j+k].velocityMax = sampleTable[i+j].velocityRoot+round(upperRangeDelta/2)
+                
+                # Handle note ranges
+                if (i == 0):
+                    sampleTable[i+j+k].keyRangeMin = 0
+                else:
+                    lowerRangeDelta = sampleTable[i+j].rootNote - sampleTable[(i+j)-velocityCycles].rootNote
+                    sampleTable[i+j+k].keyRangeMin = sampleTable[i+j].rootNote-ceil(lowerRangeDelta/2)+1
 
-            # Handle note ranges
-            if (i == 0):
-                sampleTable[i+j].keyRangeMin = 0
-            else:
-                lowerRangeDelta = sampleTable[i+j].rootNote - sampleTable[(i+j)-velocityCycles].rootNote
-                sampleTable[i+j].keyRangeMin = sampleTable[i+j].rootNote-ceil(lowerRangeDelta/2)+1
-
-            if (i == tableSize-velocityCycles):
-                sampleTable[i+j].keyRangeMax = 127
-            else:
-                upperRangeDelta = sampleTable[i+velocityCycles].rootNote - sampleTable[i+j].rootNote
-                sampleTable[i+j].keyRangeMax = sampleTable[i+j].rootNote+round(upperRangeDelta/2)
-
-            j += 1
-        i += velocityCycles
+                if (i == tableSize- (velocityCycles * totalCycles)):
+                    sampleTable[i+j+k].keyRangeMax = 127
+                else:
+                    upperRangeDelta = sampleTable[i+velocityCycles].rootNote - sampleTable[i+j].rootNote
+                    sampleTable[i+j+k].keyRangeMax = sampleTable[i+j].rootNote+round(upperRangeDelta/2)
+                k += 1
+            j += totalCycles
+        i += (velocityCycles * totalCycles)
 
     print("Found", len(sampleTable), ".wav files.")
 

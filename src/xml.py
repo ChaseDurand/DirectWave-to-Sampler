@@ -70,6 +70,11 @@ def insertSampleInXML(sample, insertionLocation, index, isLast, samplerName):
     newElement.find("VelocityRange").find("Max").set("Value", str(sample.velocityMax))
     newElement.find("VelocityRange").find("CrossfadeMin").set("Value", str(sample.velocityMin))
     newElement.find("VelocityRange").find("CrossfadeMax").set("Value", str(sample.velocityMax)) 
+    # Add selector/zone range
+    newElement.find("SelectorRange").find("Min").set("Value", str(sample.zoneMin))
+    newElement.find("SelectorRange").find("Max").set("Value", str(sample.zoneMax))
+    newElement.find("SelectorRange").find("CrossfadeMin").set("Value", str(sample.zoneMin))
+    newElement.find("SelectorRange").find("CrossfadeMax").set("Value", str(sample.zoneMax))
     # Add root key
     newElement.find("RootKey").set("Value", str(sample.rootNote))
     # Add sample end
