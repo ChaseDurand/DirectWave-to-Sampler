@@ -1,5 +1,5 @@
 # DirectWave-to-Sampler
-A script for converting FL Studio DirectWave Sampler instruments to Ableton Live (10+) Sampler instruments. Samples and instruments are copied into the User Library.
+A script for converting FL Studio DirectWave Sampler instruments to Ableton Live (10+) Sampler instruments. Sampler instruments maintain key range, velocity range, and multi-cycle/round-robin information. Samples and instruments are copied into the User Library.
 
 ## Requirements
 * python 3
