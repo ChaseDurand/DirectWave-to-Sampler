@@ -30,7 +30,7 @@ class Sample:
 def main():
     #Confirm only arguments are script+directory
     if(len(sys.argv) != 2):
-        print("Erorr: Expected 1 argument but found",len(sys.argv)-1)
+        print("Error: Expected 1 argument but found",len(sys.argv)-1)
         if(len(sys.argv) == 1):
             print("Error: Please provide wav folder path as argument!")
         exit(1)
